@@ -362,6 +362,7 @@ static void (*handler[LASTEvent]) (XEvent *) = {
 	[UnmapNotify] = unmapnotify
 };
 static Atom wmatom[WMLast], netatom[NetLast], xatom[XLast];
+static int restart = 0;
 static int running = 1;
 static Cur *cursor[CurLast];
 static Clr **scheme;
@@ -1303,12 +1304,12 @@ loadxrdb()
       xrdb = XrmGetStringDatabase(resm);
 
       if (xrdb != NULL) {
-        XRDB_LOAD_COLOR("dwm.normbordercolor", normbordercolor);
-        XRDB_LOAD_COLOR("dwm.normbgcolor", normbgcolor);
-        XRDB_LOAD_COLOR("dwm.normfgcolor", normfgcolor);
-        XRDB_LOAD_COLOR("dwm.selbordercolor", selbordercolor);
-        XRDB_LOAD_COLOR("dwm.selbgcolor", selbgcolor);
-        XRDB_LOAD_COLOR("dwm.selfgcolor", selfgcolor);
+        XRDB_LOAD_COLOR("dwm.color0", normbordercolor);
+        XRDB_LOAD_COLOR("dwm.color8", selbordercolor);
+        XRDB_LOAD_COLOR("dwm.color0", normbgcolor);
+        XRDB_LOAD_COLOR("dwm.color6", normfgcolor);
+        XRDB_LOAD_COLOR("dwm.color0", selfgcolor);
+        XRDB_LOAD_COLOR("dwm.color14", selbgcolor);
       }
     }
   }
@@ -1573,6 +1574,8 @@ propertynotify(XEvent *e)
 void
 quit(const Arg *arg)
 {
+    system("kill -HUP $(pidof -s dwmblocks");
+	if(arg->i) restart = 1;
 	running = 0;
 }
 
@@ -3138,6 +3141,7 @@ main(int argc, char *argv[])
 	scan();
 	runautostart();
 	run();
+	if(restart) execvp(argv[0], argv);
 	cleanup();
 	XCloseDisplay(dpy);
 	return EXIT_SUCCESS;
