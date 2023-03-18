@@ -208,6 +208,7 @@ static void clientmessage(XEvent *e);
 static void configure(Client *c);
 static void configurenotify(XEvent *e);
 static void configurerequest(XEvent *e);
+static void copyvalidchars(char *text, char *rawtext);
 static Monitor *createmon(void);
 static void destroynotify(XEvent *e);
 static void detach(Client *c);
@@ -330,11 +331,12 @@ static const char broken[] = "broken";
 static const char dwmdir[] = "dwm";
 static const char localshare[] = ".local/share";
 static char stext[256];
+static char rawstext[256];
 static int dwmblockssig;
 pid_t dwmblockspid = 0;
 static int screen;
 static int sw, sh;           /* X display screen geometry width, height */
-static int bh;               /* bar height */
+static int bh, blw = 0;      /* bar geometry */
 static int lrpad;            /* sum of left and right padding for text */
 static int (*xerrorxlib)(Display *, XErrorEvent *);
 static unsigned int numlockmask = 0;
@@ -565,14 +567,59 @@ unswallow(Client *c)
 	arrange(c->mon);
 }
 
+/* void */
+/* buttonpress(XEvent *e) */
+/* { */
+/* 	unsigned int i, x, click; */
+/* 	Arg arg = {0}; */
+/* 	Client *c; */
+/* 	Monitor *m; */
+/* 	XButtonPressedEvent *ev = &e->xbutton; */
+
+/* 	click = ClkRootWin; */
+/* 	/1* focus monitor if necessary *1/ */
+/* 	if ((m = wintomon(ev->window)) && m != selmon) { */
+/* 		unfocus(selmon->sel, 1); */
+/* 		selmon = m; */
+/* 		focus(NULL); */
+/* 	} */
+/* 	if (ev->window == selmon->barwin) { */
+/* 		i = x = 0; */
+/* 		do */
+/* 			x += TEXTW(tags[i]); */
+/* 		while (ev->x >= x && ++i < LENGTH(tags)); */
+/* 		if (i < LENGTH(tags)) { */
+/* 			click = ClkTagBar; */
+/* 			arg.ui = 1 << i; */
+/* 		} else if (ev->x < x + TEXTW(selmon->ltsymbol)) */
+/* 			click = ClkLtSymbol; */
+/* 		else if (ev->x > selmon->ww - (int)TEXTW(stext) - getsystraywidth()) */
+/* 			click = ClkStatusText; */
+/* 		else */
+/* 			click = ClkStatusText; */
+/* 	} else if ((c = wintoclient(ev->window))) { */
+/* 		focus(c); */
+/* 		restack(selmon); */
+/* 		XAllowEvents(dpy, ReplayPointer, CurrentTime); */
+/* 		click = ClkClientWin; */
+/* 	} */
+/* 	for (i = 0; i < LENGTH(buttons); i++) */
+/* 		if (click == buttons[i].click && buttons[i].func && buttons[i].button == ev->button */
+/* 		&& CLEANMASK(buttons[i].mask) == CLEANMASK(ev->state)) */
+/* 			buttons[i].func(click == ClkTagBar && buttons[i].arg.i == 0 ? &arg : &buttons[i].arg); */
+/* } */
+
 void
 buttonpress(XEvent *e)
 {
-	unsigned int i, x, click;
+	unsigned int i, x, click, occ = 0, stw = 0;
 	Arg arg = {0};
 	Client *c;
 	Monitor *m;
 	XButtonPressedEvent *ev = &e->xbutton;
+
+	if(showsystray)
+		stw = getsystraywidth();
 
 	click = ClkRootWin;
 	/* focus monitor if necessary */
@@ -583,17 +630,38 @@ buttonpress(XEvent *e)
 	}
 	if (ev->window == selmon->barwin) {
 		i = x = 0;
-		do
+		for (c = m->clients; c; c = c->next)
+			occ |= c->tags == 255 ? 0 : c->tags;
+		do {
+			/* do not reserve space for vacant tags */
+			if (!(occ & 1 << i || m->tagset[m->seltags] & 1 << i))
+				continue;
 			x += TEXTW(tags[i]);
-		while (ev->x >= x && ++i < LENGTH(tags));
+		} while (ev->x >= x && ++i < LENGTH(tags));
 		if (i < LENGTH(tags)) {
 			click = ClkTagBar;
 			arg.ui = 1 << i;
-		} else if (ev->x < x + TEXTW(selmon->ltsymbol))
+		} else if (ev->x < x + blw)
 			click = ClkLtSymbol;
-		else if (ev->x > selmon->ww - (int)TEXTW(stext) - getsystraywidth())
-			click = ClkStatusText;
-		else
+        else if (ev->x > (x = selmon->ww - (int)TEXTW(stext) + lrpad - stw)) {
+            click = ClkStatusText;
+			char *text = rawstext;
+			int i = -1;
+			char ch;
+			dwmblockssig = 0;
+			while (text[++i]) {
+				if ((unsigned char)text[i] < ' ') {
+					ch = text[i];
+					text[i] = '\0';
+					x += TEXTW(text) - lrpad;
+					text[i] = ch;
+					text += i+1;
+					i = -1;
+					if (x >= ev->x) break;
+					dwmblockssig = ch;
+				}
+			}
+		} else
 			click = ClkStatusText;
 	} else if ((c = wintoclient(ev->window))) {
 		focus(c);
@@ -601,6 +669,13 @@ buttonpress(XEvent *e)
 		XAllowEvents(dpy, ReplayPointer, CurrentTime);
 		click = ClkClientWin;
 	}
+	else if ((c = wintosystrayicon(ev->window))) {
+		removesystrayicon(c);
+		resizebarwin(selmon);
+		updatesystray();
+    }
+	else if ((c = swallowingclient(ev->window)))
+		unmanage(c->swallowing, 1);
 	for (i = 0; i < LENGTH(buttons); i++)
 		if (click == buttons[i].click && buttons[i].func && buttons[i].button == ev->button
 		&& CLEANMASK(buttons[i].mask) == CLEANMASK(ev->state))
@@ -840,6 +915,19 @@ configurerequest(XEvent *e)
 	XSync(dpy, False);
 }
 
+void
+copyvalidchars(char *text, char *rawtext)
+{
+	int i = -1, j = 0;
+
+	while(rawtext[++i]) {
+		if ((unsigned char)rawtext[i] >= ' ') {
+			text[j++] = rawtext[i];
+		}
+	}
+	text[j] = '\0';
+}
+
 Monitor *
 createmon(void)
 {
@@ -955,7 +1043,7 @@ drawbar(Monitor *m)
 				urg & 1 << i);
 		x += w;
 	}
-	w = TEXTW(m->ltsymbol);
+	w = blw = TEXTW(m->ltsymbol);
 	drw_setscheme(drw, scheme[SchemeNorm]);
 	x = drw_text(drw, x, 0, w, bh, lrpad / 2, m->ltsymbol, 0);
 
@@ -2661,10 +2749,16 @@ updatesizehints(Client *c)
 void
 updatestatus(void)
 {
-	if (!gettextprop(root, XA_WM_NAME, stext, sizeof(stext)))
+    Monitor *m;
+	if (!gettextprop(root, XA_WM_NAME, rawstext, sizeof(rawstext)))
 		strcpy(stext, "dwm-"VERSION);
-	drawbar(selmon);
-	updatesystray();
+	else
+		copyvalidchars(stext, rawstext);
+	/* drawbar(selmon); */
+	for(m = mons; m; m = m->next) {
+		drawbar(m);
+	    updatesystray();
+    }
 }
 
 
