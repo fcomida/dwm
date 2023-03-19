@@ -1810,6 +1810,8 @@ runautostart(void)
 	char *home;
 	struct stat sb;
 
+	system("killall dwmblocks 2>/dev/null ; dwmblocks &");
+
 	if ((home = getenv("HOME")) == NULL)
 		/* this is almost impossible */
 		return;
