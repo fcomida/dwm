@@ -27,8 +27,6 @@ static const char *fonts[]          = {
     "Font Awesome 5 Brands Regular:style=Regular:size=14:antialias=true:autohint=true"
 };
 
-/* static char dmenufont[]             = "Noto Sans:size=12:antialias=true:autohint=true"; */
-
 static char normbgcolor[]           = "#222222";
 static char normbordercolor[]       = "#444444";
 static char normfgcolor[]           = "#bbbbbb";
@@ -95,20 +93,19 @@ static const Layout layouts[] = {
 	{ "TTT",      bstack },
 	{ "===",      bstackhoriz },
 	{ "[@]",      spiral },
-	{ "[\\]",      dwindle },
+	{ "[\\]",     dwindle },
 	{ "><>",      NULL },    /* no layout function means floating behavior */
 };
 
 /* key definitions */
 #define MODKEY Mod4Mask
+
 #define TAGKEYS(KEY,TAG) \
 	{ MODKEY,                       KEY,      view,           {.ui = 1 << TAG} }, \
 	{ MODKEY|ControlMask,           KEY,      toggleview,     {.ui = 1 << TAG} }, \
 	{ MODKEY|ShiftMask,             KEY,      tag,            {.ui = 1 << TAG} }, \
 	{ MODKEY|ControlMask|ShiftMask, KEY,      toggletag,      {.ui = 1 << TAG} },
-/* #define STACKKEYS(MOD,ACTION) \ */
-/* 	{ MOD,	XK_j,	ACTION##stack,	{.i = INC(+1) } }, \ */
-/* 	{ MOD,	XK_k,	ACTION##stack,	{.i = INC(-1) } }, \ */
+
 #define STACKKEYS(MOD,ACTION) \
 	{ MOD, XK_j,     ACTION##stack, {.i = INC(+1) } }, \
 	{ MOD, XK_k,     ACTION##stack, {.i = INC(-1) } }, \
@@ -157,7 +154,6 @@ static const Key keys[] = {
 	{ MODKEY|ShiftMask,	XK_0,		        tag,		    {.ui = ~0 } },
 	{ MODKEY,			XK_Tab,		        view,		    {0} },
 	{ MODKEY,			XK_q,		        killclient,	    {0} },
-	/* { MODKEY,			XK_backslash,		view,		    {0} }, */
 	{ MODKEY,			XK_s,		        togglesticky,	{0} },
 	{ MODKEY|ShiftMask,	XK_g,		        togglegaps,	    {0} },
 	{ MODKEY,			XK_g,		        defaultgaps,    {0} },
@@ -165,25 +161,18 @@ static const Key keys[] = {
 	{ MODKEY|ShiftMask,	XK_f,		        setlayout,	    {.v = &layouts[8]} },
 	{ MODKEY,			XK_h,		        setmfact,	    {.f = -0.05} },
 	{ MODKEY,			XK_l,		        setmfact,      	{.f = +0.05} },
-    /* { MODKEY,			XK_minus,	        shiftview,	    { .i = 1 } }, */
-	/* { MODKEY,			XK_period,		    shiftview,	    { .i = -1 } }, */
 	{ MODKEY,			XK_z,		        incrgaps,	    {.i = +1 } },
 	{ MODKEY|ShiftMask,	XK_z,		        incrgaps,	    {.i = -1 } },
 	{ MODKEY,			XK_Left,	        focusmon,	    {.i = -1 } },
 	{ MODKEY|ShiftMask,	XK_Left,	        tagmon,		    {.i = -1 } },
 	{ MODKEY,			XK_Right,	        focusmon,	    {.i = +1 } },
 	{ MODKEY|ShiftMask,	XK_Right,	        tagmon,		    {.i = +1 } },
-
-	/* { MODKEY,			XK_Page_Up,	        shiftview,	    { .i = -1 } }, */
-	/* { MODKEY,			XK_Page_Down,	    shiftview,	    { .i = 1 } }, */
-
 	{ MODKEY,			XK_BackSpace,	    spawn,		    SHCMD("sysact") },
 	{ MODKEY,			XK_w,		        spawn,		    SHCMD("$BROWSER") },
 	{ MODKEY|ShiftMask,	XK_w,		        spawn,		    SHCMD("st -e sudo nmtui") },
-	/* { MODKEY,			XK_e,		        spawn,		    SHCMD("st -e neomutt ; pkill -RTMIN+12 dwmblocks; rmdir ~/.abook") }, */
 	{ MODKEY,			XK_r,		        spawn,		    SHCMD("st -e ~/.local/bin/vifm") },
 	{ MODKEY,			XK_p,			    spawn,		    SHCMD("playercontrol player play-pause") },
-	{ MODKEY|ShiftMask,	XK_p,			    spawn,		    SHCMD("playercontrol player pause") },
+	{ MODKEY|ShiftMask,	XK_p,			    spawn,		    SHCMD("playercontrol player stop") },
 	{ MODKEY,			XK_less,		    spawn,		    SHCMD("playercontrol seek 10-") },
 	{ MODKEY|ShiftMask,	XK_less,		    spawn,		    SHCMD("playercontrol seek 120+") },
 	{ MODKEY,			XK_greater,	        spawn,		    SHCMD("playercontrol seek 10+") },
@@ -198,20 +187,13 @@ static const Key keys[] = {
 	{ MODKEY,			XK_b,		        togglebar,	    {0} },
 	{ MODKEY,			XK_m,		        spawn,		    SHCMD("st -e ncmpcpp") },
 	{ MODKEY,			XK_Insert,	        spawn,		    SHCMD("notify-send \"📋 Clipboard contents:\" \"$(xclip -o -selection clipboard)\"") },
-
-	{ MODKEY,			XK_F1,		        spawn,		    SHCMD("groff -mom /usr/local/share/dwm/larbs.mom -Tpdf | zathura -") },
 	{ MODKEY,			XK_F2,		        quit,		    {1} },
 	{ MODKEY,			XK_F3,		        spawn,		    SHCMD("displayselect") },
 	{ MODKEY,			XK_F5,		        xrdb,		    {.v = NULL } },
-	{ MODKEY,			XK_F8,		        spawn,		    SHCMD("mailsync") },
-	{ MODKEY,			XK_F9,		        spawn,		    SHCMD("dmenumount") },
-	{ MODKEY,			XK_F10,		        spawn,		    SHCMD("dmenuumount") },
 	{ MODKEY,			XK_space,	        zoom,		    {0} },
 	{ MODKEY|ShiftMask,	XK_space,	        togglefloating,	{0} },
-
 	{ 0,				XK_Print,	        spawn,		    SHCMD("maim pic-full-$(date '+%y%m%d-%H%M-%S').png") },
 	{ ShiftMask,		XK_Print,	        spawn,		    SHCMD("maimpick") },
-
 	{ 0, XF86XK_AudioMute,		    spawn,		SHCMD("volume-ctl toggle; pkill -RTMIN+16 dwmblocks") },
 	{ 0, XF86XK_AudioRaiseVolume,	spawn,		SHCMD("volume-ctl up; pkill -RTMIN+16 dwmblocks") },
 	{ 0, XF86XK_AudioLowerVolume,	spawn,		SHCMD("volume-ctl down; pkill -RTMIN+16 dwmblocks") },
@@ -229,7 +211,6 @@ static const Key keys[] = {
 	{ 0, XF86XK_TouchpadToggle,	    spawn,		SHCMD("touchpad-toggle") },
 	{ 0, XF86XK_MonBrightnessUp,	spawn,		SHCMD("light -A 5") },
 	{ 0, XF86XK_MonBrightnessDown,	spawn,		SHCMD("light -U 5") },
-
 };
 
 /* button definitions */
