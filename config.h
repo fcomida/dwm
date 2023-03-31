@@ -191,6 +191,8 @@ static const Key keys[] = {
 	{ MODKEY,			XK_F3,		        spawn,		    SHCMD("displayselect") },
 	{ MODKEY,			XK_F5,		        xrdb,		    {.v = NULL } },
 	{ MODKEY,			XK_space,	        zoom,		    {0} },
+	{ MODKEY,           XK_comma,	        spawn,		    SHCMD("light -U 5") },
+	{ MODKEY,           XK_period,	        spawn,		    SHCMD("light -A 5") },
 	{ MODKEY|ShiftMask,	XK_space,	        togglefloating,	{0} },
 	{ 0,				XK_Print,	        spawn,		    SHCMD("maim pic-full-$(date '+%y%m%d-%H%M-%S').png") },
 	{ ShiftMask,		XK_Print,	        spawn,		    SHCMD("maimpick") },
